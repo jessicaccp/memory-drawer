@@ -1,7 +1,7 @@
 # 0001: Repo infrastructure specification
 
 Status: done
-Version: 6
+Version: 7
 
 Source of truth for the repo infrastructure work, the step before any pipeline code.
 
@@ -23,8 +23,6 @@ Folder names, definitive:
 - reports/
 
 Extension map file: `extensions.json` (repo root).
-
-Acceptance: the English-only policy is enforced by `tests/test_no_portuguese.py`; the forbidden terms live there as data so that specs stay English-only.
 
 ## 3. Package skeleton
 
@@ -94,11 +92,11 @@ Project recipes live in `justfile`: `just check` runs all four checks, `just for
 - [ ] `uv sync` from a clean checkout, then `uv run python -m memory_drawer --help` works (Windows and Linux)
 - [ ] ruff, ruff format --check, mypy, pytest clean on the skeleton
 - [ ] `extensions.json` validates against the schema in §5 (test included; `mod` under music only)
-- [ ] English-only grep from §2 returns nothing across the repo (specs exempt)
 - [ ] README shows setup and the current entry point
 
 ## Change log
 
+- 2026-08-22, v7: English-only policy enforced by review, the language test removed.
 - 2026-08-22, v6: Python pinned to 3.14 (pyproject, ruff, mypy, `.python-version`).
 - 2026-08-22, v5: environment moved to uv (dev tools in a dependency group, setup via `uv sync`), ruff format added to the checks, project recipes in `justfile`.
 - 2026-08-22, v4: English-only acceptance moved into a test so no Portuguese text stays in specs; the placeholder command stub removed, commands arrive with their specs.

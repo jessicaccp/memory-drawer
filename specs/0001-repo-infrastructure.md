@@ -1,7 +1,7 @@
 # 0001: Repo infrastructure specification
 
-Status: approved
-Version: 2
+Status: done
+Version: 3
 
 Source of truth for the repo infrastructure work, the step before any pipeline code.
 
@@ -96,5 +96,6 @@ All four commands clean. `ruff check .` and `mypy memory_drawer` are part of the
 
 ## Change log
 
+- 2026-08-22, v3: implemented on feature/01-infra, acceptance criteria verified (Linux; Windows venv check pending on the target machine).
 - 2026-08-22, v2: approved, the three decisions confirmed.
 - 2026-08-22, v1: created as the project's first spec. Status proposed, awaiting approval of the three decisions.

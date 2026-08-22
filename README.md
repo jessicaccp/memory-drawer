@@ -15,22 +15,23 @@ It works on a copy and nothing is lost: originals are never touched, duplicates 
 
 ## Setup
 
-Target machine is Windows; the dev machine is Linux. Commands differ only in the venv path.
+The environment is managed by [uv](https://docs.astral.sh/uv/), which installs its own Python, so the machine does not need one:
 
 ```
-python -m venv .venv
-.venv\Scripts\pip install -e ".[dev]"     (Windows)
-.venv/bin/pip install -e ".[dev]"         (Linux)
+uv sync
 ```
 
 Run the CLI and the checks:
 
 ```
-python -m memory_drawer --help
-ruff check .
-mypy memory_drawer
-pytest
+uv run python -m memory_drawer --help
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy memory_drawer
+uv run pytest
 ```
+
+Or use the recipes in the `justfile` (`just check`, `just format`).
 
 ## Status
 

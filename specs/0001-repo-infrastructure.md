@@ -1,9 +1,9 @@
 # 0001: Repo infrastructure specification
 
-Status: proposed
-Version: 1
+Status: approved
+Version: 2
 
-Source of truth for the repo infrastructure work, the step before any pipeline code. Decisions marked **[DECISION]** have a proposed default, confirm before implementation.
+Source of truth for the repo infrastructure work, the step before any pipeline code.
 
 ## 1. Purpose and scope
 
@@ -30,7 +30,7 @@ Acceptance: from the repo root, `grep -riE 'mestre|quarentena|relatorios|consoli
 
 - `memory_drawer/` package with `__init__.py` (module docstring + `__version__ = "0.1.0"`).
 - `memory_drawer/__main__.py`: argparse CLI with a `slice1` subcommand (prints a clear "not implemented yet" message with a non-zero exit). `python -m memory_drawer --help` is the acceptance.
-- **No console script in pyproject.toml.** **[DECISION]** `python -m memory_drawer` is the entry point; a console script is added when a spec requires one.
+- **No console script in pyproject.toml.** `python -m memory_drawer` is the entry point; a console script is added when a spec requires one.
 
 ## 4. pyproject.toml
 
@@ -47,7 +47,7 @@ Acceptance: from the repo root, `grep -riE 'mestre|quarentena|relatorios|consoli
 - Location: repo root, `extensions.json`.
 - Schema: top-level object with keys exactly `photos`, `videos`, `music`, `documents` (lower case); each maps to an array of lower-case extensions without the dot. `other` is implicit: anything unlisted classifies as Other, never forced (PLAN.md §8 rule).
 - Validation, enforced by `tests/test_extensions.py`: keys are only the four known categories; every extension lower-case and dotless; no extension twice within a category; no extension in two categories.
-- Seed: the lists from PLAN.md §8 with one fix. **[DECISION]** `mod` appears in both the videos and the music lists in PLAN.md; it is an Amiga module audio format, so it stays only under music.
+- Seed: the lists from PLAN.md §8, with `mod` only under music (it is an Amiga module audio format, listed under both videos and music in PLAN.md).
 
 ## 6. Layout constants module (memory_drawer/layout.py)
 
@@ -61,7 +61,7 @@ REPORTS = "reports"
 MANIFEST = "manifest.jsonl"
 ```
 
-Thumbnails: reports embed them as data URIs, so no thumbnail folder exists. **[DECISION]** A `thumbnails/` directory is only added when a spec requires it.
+Thumbnails: reports embed them as data URIs, so no thumbnail folder exists. A `thumbnails/` directory is only added when a spec requires it.
 
 ## 7. Setup and tooling (what "passing" means)
 
@@ -96,4 +96,5 @@ All four commands clean. `ruff check .` and `mypy memory_drawer` are part of the
 
 ## Change log
 
+- 2026-08-22, v2: approved, the three decisions confirmed.
 - 2026-08-22, v1: created as the project's first spec. Status proposed, awaiting approval of the three decisions.

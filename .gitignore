@@ -5,6 +5,11 @@ __pycache__/
 venv/
 *.egg-info/
 
+# Cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
 # Environment / secrets
 .env
 .env.*

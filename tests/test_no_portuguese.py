@@ -34,7 +34,7 @@ def test_no_forbidden_terms() -> None:
             continue
         try:
             text = path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
+        except UnicodeDecodeError, OSError:
             continue
         for term in FORBIDDEN:
             if term.lower() in text.lower():

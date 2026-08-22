@@ -1,7 +1,7 @@
 # 0001: Repo infrastructure specification
 
 Status: done
-Version: 5
+Version: 6
 
 Source of truth for the repo infrastructure work, the step before any pipeline code.
 
@@ -35,11 +35,11 @@ Acceptance: the English-only policy is enforced by `tests/test_no_portuguese.py`
 ## 4. pyproject.toml
 
 - Build backend: hatchling (`[build-system] requires = ["hatchling"]`).
-- `requires-python = ">=3.12"` (dev machine has 3.12.7; the Windows machine must install 3.12+).
+- `requires-python = ">=3.14"` (uv installs 3.14 on both machines; the Windows machine does not need a system Python).
 - Runtime dependency: Pillow (only one so far; exiftool stays out of the package, it is invoked as an external binary).
 - Dev tools in `[dependency-groups] dev = ["ruff", "pytest", "mypy"]` (PEP 735, installed by `uv sync`).
-- `[tool.ruff]`: `target-version = "py312"`, `line-length = 100`, `select = ["E4", "E7", "E9", "F", "I", "UP"]`.
-- `[tool.mypy]`: `python_version = "3.12"`, `ignore_missing_imports = true` (Pillow ships no stubs), `check_untyped_defs = true`.
+- `[tool.ruff]`: `target-version = "py314"`, `line-length = 100`, `select = ["E4", "E7", "E9", "F", "I", "UP"]`.
+- `[tool.mypy]`: `python_version = "3.14"`, `ignore_missing_imports = true` (Pillow ships no stubs), `check_untyped_defs = true`.
 - `[tool.pytest.ini_options]`: `testpaths = ["tests"]`, `addopts = "-q"`.
 
 ## 5. extensions.json
@@ -65,7 +65,7 @@ Thumbnails: reports embed them as data URIs, so no thumbnail folder exists. A `t
 
 ## 7. Setup and tooling (what "passing" means)
 
-The environment is managed by uv (https://docs.astral.sh/uv/). uv installs its own Python 3.12+, so the machine does not need a system Python:
+The environment is managed by uv (https://docs.astral.sh/uv/). uv installs its own Python 3.14, so the machine does not need a system Python:
 
 ```
 uv sync
@@ -99,6 +99,7 @@ Project recipes live in `justfile`: `just check` runs all four checks, `just for
 
 ## Change log
 
+- 2026-08-22, v6: Python pinned to 3.14 (pyproject, ruff, mypy, `.python-version`).
 - 2026-08-22, v5: environment moved to uv (dev tools in a dependency group, setup via `uv sync`), ruff format added to the checks, project recipes in `justfile`.
 - 2026-08-22, v4: English-only acceptance moved into a test so no Portuguese text stays in specs; the placeholder command stub removed, commands arrive with their specs.
 - 2026-08-22, v3: implemented on feature/01-infra, acceptance criteria verified (Linux; Windows venv check pending on the target machine).

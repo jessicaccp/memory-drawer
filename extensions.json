@@ -1,0 +1,25 @@
+{
+  "photos": [
+    "jpg", "jpeg", "jpe", "png", "gif", "heic", "heif", "webp", "avif",
+    "tiff", "tif", "bmp", "pcx", "tga", "svg", "psd",
+    "dng", "cr2", "cr3", "crw", "nef", "nrw", "arw", "sr2", "orf", "pef",
+    "raf", "rw2", "srw", "x3f", "3fr", "mrw", "kdc", "erf"
+  ],
+  "videos": [
+    "mp4", "m4v", "mov", "mkv", "avi", "wmv", "webm", "flv", "f4v",
+    "3gp", "3g2", "3gpp", "mpg", "mpeg", "mpe", "mts", "m2ts", "ts",
+    "vob", "dat", "tod", "asf", "rm", "rmvb", "mxf", "dv", "divx",
+    "ogv", "swf", "amv", "dvr-ms"
+  ],
+  "music": [
+    "mp3", "wav", "flac", "m4a", "aac", "ogg", "opus", "wma", "mid", "midi",
+    "amr", "awb", "3ga", "aiff", "aif", "au", "ape", "wv", "ra", "ac3",
+    "dts", "voc", "vox", "dss", "mpc", "mka", "m4b", "m4r", "mod", "s3m",
+    "xm", "it", "kara"
+  ],
+  "documents": [
+    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "rtf",
+    "odt", "ods", "odp", "csv", "tsv", "html", "htm", "epub", "mobi",
+    "azw", "djvu", "tex", "xml", "log", "md"
+  ]
+}

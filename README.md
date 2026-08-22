@@ -13,9 +13,28 @@ memory-drawer consolidates everything into one master folder, finds duplicates, 
 - **Human review where certainty ends.** Only byte-identical files are handled automatically.
 - **Everything is reported.** HTML reports with thumbnails after every phase.
 
+## Setup
+
+Target machine is Windows; the dev machine is Linux. Commands differ only in the venv path.
+
+```
+python -m venv .venv
+.venv\Scripts\pip install -e ".[dev]"     (Windows)
+.venv/bin/pip install -e ".[dev]"         (Linux)
+```
+
+Run the CLI and the checks:
+
+```
+python -m memory_drawer --help
+ruff check .
+mypy memory_drawer
+pytest
+```
+
 ## Status
 
-Early planning. Development is spec-driven: per-slice contracts live in [specs/](specs/), approved before implementation.
+Early planning. Development is spec-driven: per-slice contracts live in [specs/](specs/), approved before implementation. Infrastructure in place.
 
 ## License
 

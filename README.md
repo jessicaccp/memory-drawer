@@ -34,7 +34,7 @@ pytest
 
 ## Status
 
-Early planning. Development is spec-driven: per-slice contracts live in [specs/](specs/), approved before implementation. Infrastructure in place.
+Early planning. Development is spec-driven: the implementation contracts live in [specs/](specs/), approved before implementation. Infrastructure in place.
 
 ## License
 

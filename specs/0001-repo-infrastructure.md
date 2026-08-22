@@ -1,7 +1,7 @@
 # 0001: Repo infrastructure specification
 
 Status: done
-Version: 3
+Version: 4
 
 Source of truth for the repo infrastructure work, the step before any pipeline code.
 
@@ -24,12 +24,12 @@ Folder names, definitive:
 
 Extension map file: `extensions.json` (repo root).
 
-Acceptance: from the repo root, `grep -riE 'mestre|quarentena|relatorios|consolidado|sem_data|extensoes|Fotos|Vídeos|Músicas|Documentos|Outros' --exclude-dir=.git --exclude-dir=specs .` returns nothing (specs are exempt, this spec itself contains the pattern).
+Acceptance: the English-only policy is enforced by `tests/test_no_portuguese.py`; the forbidden terms live there as data so that specs stay English-only.
 
 ## 3. Package skeleton
 
 - `memory_drawer/` package with `__init__.py` (module docstring + `__version__ = "0.1.0"`).
-- `memory_drawer/__main__.py`: argparse CLI with a `slice1` subcommand (prints a clear "not implemented yet" message with a non-zero exit). `python -m memory_drawer --help` is the acceptance.
+- `memory_drawer/__main__.py`: argparse CLI (help and version). Commands are added when their spec is implemented. `python -m memory_drawer --help` is the acceptance.
 - **No console script in pyproject.toml.** `python -m memory_drawer` is the entry point; a console script is added when a spec requires one.
 
 ## 4. pyproject.toml
@@ -96,6 +96,7 @@ All four commands clean. `ruff check .` and `mypy memory_drawer` are part of the
 
 ## Change log
 
+- 2026-08-22, v4: English-only acceptance moved into a test so no Portuguese text stays in specs; the placeholder command stub removed, commands arrive with their specs.
 - 2026-08-22, v3: implemented on feature/01-infra, acceptance criteria verified (Linux; Windows venv check pending on the target machine).
 - 2026-08-22, v2: approved, the three decisions confirmed.
 - 2026-08-22, v1: created as the project's first spec. Status proposed, awaiting approval of the three decisions.

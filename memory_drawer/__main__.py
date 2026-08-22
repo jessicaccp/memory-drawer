@@ -11,13 +11,7 @@ def main(argv: list[str] | None = None) -> int:
         description="Organize a personal photo archive without ever deleting anything.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    sub = parser.add_subparsers(dest="command")
-    sub.add_parser("slice1", help="consolidate, hash, dedupe, report (not implemented yet)")
-
-    args = parser.parse_args(argv)
-    if args.command == "slice1":
-        print("slice1 is not implemented yet.")
-        return 1
+    parser.parse_args(argv)
     parser.print_help()
     return 0
 

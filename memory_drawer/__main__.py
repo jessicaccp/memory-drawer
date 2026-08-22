@@ -8,7 +8,7 @@ from memory_drawer import __version__
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="memory_drawer",
-        description="Organize a personal archive without ever deleting anything.",
+        description="Consolidate scattered backups into one organized archive.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.parse_args(argv)

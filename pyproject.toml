@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "memory-drawer"
 dynamic = ["version"]
-description = "Organize a personal photo archive without ever deleting anything."
+description = "Organize a personal archive without ever deleting anything."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "CC BY-NC 4.0" }

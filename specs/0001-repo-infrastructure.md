@@ -1,0 +1,100 @@
+# 0001: Repo infrastructure specification
+
+Status: approved
+Version: 2
+
+Source of truth for the repo infrastructure work, the step before any pipeline code.
+
+## 1. Purpose and scope
+
+**In:** Python package skeleton, `pyproject.toml` with dev tooling (ruff, pytest, mypy), the live extension map `extensions.json` (seeded and validated), the layout constants module, README updated, and the English-only policy applied repo-wide.
+
+**Out:** pipeline logic, the local web server and its console entry point (see §3), exiftool integration, `config.json` loading.
+
+## 2. English-only policy
+
+Nothing in the project is Portuguese: code, identifiers, comments, docs, specs, report text, config keys, output folder names.
+
+Folder names, definitive:
+
+- master/
+- consolidated/
+- quarantine/
+- reports/
+
+Extension map file: `extensions.json` (repo root).
+
+Acceptance: from the repo root, `grep -riE 'mestre|quarentena|relatorios|consolidado|sem_data|extensoes|Fotos|Vídeos|Músicas|Documentos|Outros' --exclude-dir=.git --exclude-dir=specs .` returns nothing (specs are exempt, this spec itself contains the pattern).
+
+## 3. Package skeleton
+
+- `memory_drawer/` package with `__init__.py` (module docstring + `__version__ = "0.1.0"`).
+- `memory_drawer/__main__.py`: argparse CLI with a `slice1` subcommand (prints a clear "not implemented yet" message with a non-zero exit). `python -m memory_drawer --help` is the acceptance.
+- **No console script in pyproject.toml.** `python -m memory_drawer` is the entry point; a console script is added when a spec requires one.
+
+## 4. pyproject.toml
+
+- Build backend: hatchling (`[build-system] requires = ["hatchling"]`).
+- `requires-python = ">=3.12"` (dev machine has 3.12.7; the Windows machine must install 3.12+).
+- Runtime dependency: Pillow (only one so far; exiftool stays out of the package, it is invoked as an external binary).
+- `[project.optional-dependencies] dev = ["ruff", "pytest", "mypy"]`.
+- `[tool.ruff]`: `target-version = "py312"`, `line-length = 100`, `select = ["E4", "E7", "E9", "F", "I", "UP"]`.
+- `[tool.mypy]`: `python_version = "3.12"`, `ignore_missing_imports = true` (Pillow ships no stubs), `check_untyped_defs = true`.
+- `[tool.pytest.ini_options]`: `testpaths = ["tests"]`, `addopts = "-q"`.
+
+## 5. extensions.json
+
+- Location: repo root, `extensions.json`.
+- Schema: top-level object with keys exactly `photos`, `videos`, `music`, `documents` (lower case); each maps to an array of lower-case extensions without the dot. `other` is implicit: anything unlisted classifies as Other, never forced (PLAN.md §8 rule).
+- Validation, enforced by `tests/test_extensions.py`: keys are only the four known categories; every extension lower-case and dotless; no extension twice within a category; no extension in two categories.
+- Seed: the lists from PLAN.md §8, with `mod` only under music (it is an Amiga module audio format, listed under both videos and music in PLAN.md).
+
+## 6. Layout constants module (memory_drawer/layout.py)
+
+Single source of truth for the master folder structure:
+
+```python
+MASTER = "master"             # root of the archive
+CONSOLIDATED = "consolidated"
+QUARANTINE = "quarantine"
+REPORTS = "reports"
+MANIFEST = "manifest.jsonl"
+```
+
+Thumbnails: reports embed them as data URIs, so no thumbnail folder exists. A `thumbnails/` directory is only added when a spec requires it.
+
+## 7. Setup and tooling (what "passing" means)
+
+Target machine is Windows; the dev machine is Linux. Commands differ only in the venv path:
+
+```
+python -m venv .venv
+.venv\Scripts\pip install -e ".[dev]"     (Windows)
+.venv/bin/pip install -e ".[dev]"         (Linux)
+
+.venv\Scripts\python -m memory_drawer --help
+.venv\Scripts\ruff check .
+.venv\Scripts\mypy memory_drawer
+.venv\Scripts\pytest
+```
+
+All four commands clean. `ruff check .` and `mypy memory_drawer` are part of the dev loop from now on, not optional.
+
+## 8. README update
+
+- New "Setup" section with the venv commands above.
+- "Status": infrastructure in place.
+- Tagline, principles, license unchanged.
+
+## 9. Acceptance criteria
+
+- [ ] `python -m memory_drawer --help` works in a fresh venv (Windows and Linux)
+- [ ] ruff, mypy, pytest clean on the skeleton
+- [ ] `extensions.json` validates against the schema in §5 (test included; `mod` under music only)
+- [ ] English-only grep from §2 returns nothing across the repo (specs exempt)
+- [ ] README shows setup and the current entry point
+
+## Change log
+
+- 2026-08-22, v2: approved, the three decisions confirmed.
+- 2026-08-22, v1: created as the project's first spec. Status proposed, awaiting approval of the three decisions.

@@ -15,7 +15,7 @@ memory-drawer consolidates everything into one master folder, finds duplicates, 
 
 ## Status
 
-Early planning. Development is sliced into issues, one per slice, created from the templates in `.github/ISSUE_TEMPLATE/`.
+Early planning. Development is spec-driven: per-slice contracts live in [specs/](specs/), approved before implementation.
 
 ## License
 

@@ -1,7 +1,7 @@
 # 0001: Repo infrastructure specification
 
-Status: approved
-Version: 2
+Status: done
+Version: 7
 
 Source of truth for the repo infrastructure work, the step before any pipeline code.
 
@@ -24,22 +24,20 @@ Folder names, definitive:
 
 Extension map file: `extensions.json` (repo root).
 
-Acceptance: from the repo root, `grep -riE 'mestre|quarentena|relatorios|consolidado|sem_data|extensoes|Fotos|Vídeos|Músicas|Documentos|Outros' --exclude-dir=.git --exclude-dir=specs .` returns nothing (specs are exempt, this spec itself contains the pattern).
-
 ## 3. Package skeleton
 
 - `memory_drawer/` package with `__init__.py` (module docstring + `__version__ = "0.1.0"`).
-- `memory_drawer/__main__.py`: argparse CLI with a `slice1` subcommand (prints a clear "not implemented yet" message with a non-zero exit). `python -m memory_drawer --help` is the acceptance.
+- `memory_drawer/__main__.py`: argparse CLI (help and version). Commands are added when their spec is implemented. `python -m memory_drawer --help` is the acceptance.
 - **No console script in pyproject.toml.** `python -m memory_drawer` is the entry point; a console script is added when a spec requires one.
 
 ## 4. pyproject.toml
 
 - Build backend: hatchling (`[build-system] requires = ["hatchling"]`).
-- `requires-python = ">=3.12"` (dev machine has 3.12.7; the Windows machine must install 3.12+).
+- `requires-python = ">=3.14"` (uv installs 3.14 on both machines; the Windows machine does not need a system Python).
 - Runtime dependency: Pillow (only one so far; exiftool stays out of the package, it is invoked as an external binary).
-- `[project.optional-dependencies] dev = ["ruff", "pytest", "mypy"]`.
-- `[tool.ruff]`: `target-version = "py312"`, `line-length = 100`, `select = ["E4", "E7", "E9", "F", "I", "UP"]`.
-- `[tool.mypy]`: `python_version = "3.12"`, `ignore_missing_imports = true` (Pillow ships no stubs), `check_untyped_defs = true`.
+- Dev tools in `[dependency-groups] dev = ["ruff", "pytest", "mypy"]` (PEP 735, installed by `uv sync`).
+- `[tool.ruff]`: `target-version = "py314"`, `line-length = 100`, `select = ["E4", "E7", "E9", "F", "I", "UP"]`.
+- `[tool.mypy]`: `python_version = "3.14"`, `ignore_missing_imports = true` (Pillow ships no stubs), `check_untyped_defs = true`.
 - `[tool.pytest.ini_options]`: `testpaths = ["tests"]`, `addopts = "-q"`.
 
 ## 5. extensions.json
@@ -54,7 +52,7 @@ Acceptance: from the repo root, `grep -riE 'mestre|quarentena|relatorios|consoli
 Single source of truth for the master folder structure:
 
 ```python
-MASTER = "master"             # root of the archive
+MASTER = "master"  # root of the archive
 CONSOLIDATED = "consolidated"
 QUARANTINE = "quarantine"
 REPORTS = "reports"
@@ -65,20 +63,23 @@ Thumbnails: reports embed them as data URIs, so no thumbnail folder exists. A `t
 
 ## 7. Setup and tooling (what "passing" means)
 
-Target machine is Windows; the dev machine is Linux. Commands differ only in the venv path:
+The environment is managed by uv (https://docs.astral.sh/uv/). uv installs its own Python 3.14, so the machine does not need a system Python:
 
 ```
-python -m venv .venv
-.venv\Scripts\pip install -e ".[dev]"     (Windows)
-.venv/bin/pip install -e ".[dev]"         (Linux)
-
-.venv\Scripts\python -m memory_drawer --help
-.venv\Scripts\ruff check .
-.venv\Scripts\mypy memory_drawer
-.venv\Scripts\pytest
+uv sync
 ```
 
-All four commands clean. `ruff check .` and `mypy memory_drawer` are part of the dev loop from now on, not optional.
+This creates `.venv` and installs the package and dev tools (ruff, mypy, pytest) from pyproject.toml, pinned by `uv.lock`. Commands run through `uv run`:
+
+```
+uv run python -m memory_drawer --help
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy memory_drawer
+uv run pytest
+```
+
+Project recipes live in `justfile`: `just check` runs all four checks, `just format` formats. All checks clean. `ruff check .` and `mypy memory_drawer` are part of the dev loop from now on, not optional.
 
 ## 8. README update
 
@@ -88,13 +89,17 @@ All four commands clean. `ruff check .` and `mypy memory_drawer` are part of the
 
 ## 9. Acceptance criteria
 
-- [ ] `python -m memory_drawer --help` works in a fresh venv (Windows and Linux)
-- [ ] ruff, mypy, pytest clean on the skeleton
+- [ ] `uv sync` from a clean checkout, then `uv run python -m memory_drawer --help` works (Windows and Linux)
+- [ ] ruff, ruff format --check, mypy, pytest clean on the skeleton
 - [ ] `extensions.json` validates against the schema in §5 (test included; `mod` under music only)
-- [ ] English-only grep from §2 returns nothing across the repo (specs exempt)
 - [ ] README shows setup and the current entry point
 
 ## Change log
 
+- 2026-08-22, v7: English-only policy enforced by review, the language test removed.
+- 2026-08-22, v6: Python pinned to 3.14 (pyproject, ruff, mypy, `.python-version`).
+- 2026-08-22, v5: environment moved to uv (dev tools in a dependency group, setup via `uv sync`), ruff format added to the checks, project recipes in `justfile`.
+- 2026-08-22, v4: English-only acceptance moved into a test so no Portuguese text stays in specs; the placeholder command stub removed, commands arrive with their specs.
+- 2026-08-22, v3: implemented on feature/01-infra, acceptance criteria verified (Linux; Windows venv check pending on the target machine).
 - 2026-08-22, v2: approved, the three decisions confirmed.
 - 2026-08-22, v1: created as the project's first spec. Status proposed, awaiting approval of the three decisions.

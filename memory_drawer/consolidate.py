@@ -1,6 +1,5 @@
 """Consolidation: copy sources into the master folder (spec 0004)."""
 
-import hashlib
 import json
 import os
 import shutil
@@ -10,10 +9,9 @@ from datetime import datetime
 from pathlib import Path
 
 from memory_drawer.config import Config, Source
+from memory_drawer.fsutil import copy_stream, sha256_file, walk_sorted
 from memory_drawer.layout import CONSOLIDATED
-from memory_drawer.manifest import Record, already_ingested, append, load, lookup
-
-CHUNK = 1024 * 1024
+from memory_drawer.manifest import Record, already_ingested, append, load, lookup, rewrite
 
 
 class ConsolidateAbort(Exception):
@@ -33,6 +31,7 @@ class ConsolidateResult:
     re_copied: int = 0
     already_present: int = 0
     skipped: int = 0
+    kind_fixes: int = 0
     bytes_copied: int = 0
     walk_errors: int = 0
     errors: list[str] = field(default_factory=list)
@@ -51,10 +50,9 @@ def scan(source: Path) -> ScanResult:
         errors += 1
 
     try:
-        for dirpath, dirnames, filenames in os.walk(source, onerror=onerror, followlinks=False):
-            dirnames.sort()
-            for name in sorted(filenames):
-                full = Path(dirpath) / name
+        for base, names in walk_sorted(source, onerror):
+            for name in names:
+                full = base / name
                 if full.is_symlink() or not full.is_file():
                     continue
                 try:
@@ -65,17 +63,6 @@ def scan(source: Path) -> ScanResult:
     except OSError:
         errors += 1
     return ScanResult(count=count, total=total, errors=errors)
-
-
-def _hash_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        while True:
-            chunk = fh.read(CHUNK)
-            if not chunk:
-                break
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _iso_mtime(st: os.stat_result) -> str:
@@ -99,25 +86,12 @@ def _cleanup(path: Path) -> None:
         pass
 
 
-def _copy_stream(src: Path, dst: Path) -> str:
-    """Copy src to dst in chunks, returning the sha256 of the source bytes."""
-    digest = hashlib.sha256()
-    with src.open("rb") as fin, dst.open("wb") as fout:
-        while True:
-            chunk = fin.read(CHUNK)
-            if not chunk:
-                break
-            digest.update(chunk)
-            fout.write(chunk)
-    return digest.hexdigest()
-
-
 def _copy_with_retry(src: Path, dst: Path, result: ConsolidateResult) -> str | None:
     """Copy with one retry, cleaning partial artifacts, returning the source sha256."""
     last_error: OSError | None = None
     for _ in range(2):
         try:
-            sha256 = _copy_stream(src, dst)
+            sha256 = copy_stream(src, dst)
         except OSError as exc:
             last_error = exc
             _cleanup(dst)
@@ -189,13 +163,9 @@ def _copy_source(
         result.walk_errors += 1
 
     try:
-        for dirpath, dirnames, filenames in os.walk(
-            source_root, onerror=onerror, followlinks=False
-        ):
-            dirnames.sort()
-            base = Path(dirpath)
-            lower_names = {name.lower(): name for name in filenames}
-            for name in sorted(filenames):
+        for base, names in walk_sorted(source_root, onerror):
+            lower_names = {name.lower(): name for name in names}
+            for name in names:
                 full = base / name
                 if full.is_symlink() or not full.is_file():
                     result.skipped += 1
@@ -212,13 +182,18 @@ def _copy_source(
                 sidecar_of = _is_sidecar_of(lower_names, name)
                 if sidecar_of is not None and sidecar_of != name[:-5]:
                     result.case_diffs.append(str(full))
+                computed_kind = "sidecar" if sidecar_of is not None else "file"
 
                 rec = lookup(records, str(full))
                 if rec is not None:
                     if rec.status == "quarantined":
                         result.skipped += 1
                         continue
-                    if already_ingested(records, str(full), size, mtime, _hash_file(full)):
+                    if already_ingested(records, str(full), size, mtime, sha256_file(full)):
+                        if rec.kind != computed_kind or rec.sidecar_of != sidecar_of:
+                            rec.kind = computed_kind
+                            rec.sidecar_of = sidecar_of
+                            result.kind_fixes += 1
                         if dst.exists():
                             result.already_present += 1
                         else:
@@ -256,7 +231,7 @@ def _copy_source(
                     size=size,
                     sha256=sha,
                     src_mtime=mtime,
-                    kind="sidecar" if sidecar_of is not None else "file",
+                    kind=computed_kind,
                     sidecar_of=sidecar_of,
                     status="ingested",
                     errors=record_errors,
@@ -279,4 +254,6 @@ def consolidate(config: Config, manifest_path: Path) -> ConsolidateResult:
     result = ConsolidateResult()
     for source in config.sources:
         _copy_source(config, source, records, result, manifest_path)
+    if result.kind_fixes:
+        rewrite(manifest_path, records)
     return result

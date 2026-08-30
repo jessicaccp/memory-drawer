@@ -127,7 +127,7 @@ def test_keyboard_interrupt_exits_130(tmp_path, capsys, monkeypatch):
     def interrupt(*args):
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(cons, "_copy_stream", interrupt)
+    monkeypatch.setattr(cons, "copy_stream", interrupt)
     assert main(["consolidate", "--config", str(cfg)]) == 130
     assert "interrupted" in capsys.readouterr().out
 

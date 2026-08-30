@@ -175,7 +175,7 @@ def test_failed_copy_no_record_no_partial(tmp_path, monkeypatch):
     def broken(src, dst):
         raise OSError("boom")
 
-    monkeypatch.setattr(cons, "_copy_stream", broken)
+    monkeypatch.setattr(cons, "copy_stream", broken)
     result, records = run(config, tmp_path)
     assert records == []
     assert len(result.errors) == 1
@@ -187,7 +187,7 @@ def test_retry_once_then_success(tmp_path, monkeypatch):
 
     config = make_config(tmp_path)
     (config.sources[0].path / "a.txt").write_text("hello")
-    real = cons._copy_stream
+    real = cons.copy_stream
     calls = {"n": 0}
 
     def flaky(src, dst):
@@ -196,7 +196,7 @@ def test_retry_once_then_success(tmp_path, monkeypatch):
             raise OSError("transient")
         return real(src, dst)
 
-    monkeypatch.setattr(cons, "_copy_stream", flaky)
+    monkeypatch.setattr(cons, "copy_stream", flaky)
     result, records = run(config, tmp_path)
     assert result.errors == []
     assert result.copied == 1
@@ -212,7 +212,7 @@ def test_source_vanished_mid_run(tmp_path, monkeypatch):
     def vanished(src, dst):
         raise FileNotFoundError("gone")
 
-    monkeypatch.setattr(cons, "_copy_stream", vanished)
+    monkeypatch.setattr(cons, "copy_stream", vanished)
     result, records = run(config, tmp_path)
     assert records == []
     assert len(result.errors) == 1
@@ -268,6 +268,20 @@ def test_dest_without_record_is_error(tmp_path):
     assert records == []
     assert any("without a record" in e for e in result.errors)
     assert dest.read_text() == "stray"
+
+
+def test_orphan_json_becomes_sidecar(tmp_path):
+    config = make_config(tmp_path)
+    src = config.sources[0].path
+    (src / "IMG.JPG.json").write_text("{}")
+    result, records = run(config, tmp_path)
+    assert records[0].kind == "file"
+    (src / "IMG.JPG").write_bytes(b"photo")
+    result2, records2 = run(config, tmp_path)
+    assert result2.copied == 1
+    assert result2.kind_fixes == 1
+    side = next(r for r in records2 if r.kind == "sidecar")
+    assert side.sidecar_of == "IMG.JPG"
 
 
 def test_abort_when_dest_root_not_creatable(tmp_path, monkeypatch):
@@ -344,6 +358,6 @@ def test_cli_errors_exit_1(tmp_path, capsys, monkeypatch):
     def broken(src, dst):
         raise OSError("boom")
 
-    monkeypatch.setattr(cons, "_copy_stream", broken)
+    monkeypatch.setattr(cons, "copy_stream", broken)
     assert main(["consolidate", "--config", str(cfg)]) == 1
     assert "Errors: 1" in capsys.readouterr().out

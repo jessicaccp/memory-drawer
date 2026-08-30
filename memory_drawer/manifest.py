@@ -82,7 +82,11 @@ def _from_dict(data: dict) -> Record:
 
 
 def append(path: str | Path, records: list[Record]) -> None:
-    """Append records, writing the header only when the file is new or empty."""
+    """Append records, writing the header only when the file is new or empty.
+
+    Records always have the full shape: the Record dataclass requires every
+    field at construction, so a malformed record cannot be created.
+    """
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     is_new = not target.exists() or target.stat().st_size == 0

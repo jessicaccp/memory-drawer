@@ -29,10 +29,12 @@ memory-drawer consolidates scattered backups into one organized archive. Python 
 ## Code rules
 
 - English only everywhere: identifiers, comments, docs, reports, folder names. No em-dashes in text.
+- The unit of work is called a spec; no other term for it is used anywhere in the project.
 - Code never references specs or decisions in docstrings or comments.
-- Modern Python 3.14: `pathlib`, dataclasses with `slots`, `StrEnum`, PEP 604 unions, `Path.walk`.
+- Modern Python 3.14: `pathlib`, dataclasses with `slots`, `StrEnum`, PEP 604 unions, `Path.walk`, `collections.abc`, `contextlib.suppress`.
+- Use the existing enums (`Kind`, `Status`) for those values; never hard-code the strings where an enum exists.
 - Robustness first: anticipate failures and edge cases, especially Windows (UTF-8 BOM, reserved file names, console encoding, long paths). Fail fast with clear messages, never guess, never lose data.
-- When something repeats, extract a shared helper (the `fsutil.py` pattern) instead of duplicating.
+- Each module owns one responsibility (`config`, `manifest`, `consolidate`, `fsutil`, `layout`, the CLI). Move code that does not fit; extract shared helpers when something repeats (the `fsutil.py` pattern).
 - Refactors never change behavior: `tests/test_golden.py` pins the pipeline output byte for byte.
 
 ## Communication
@@ -64,7 +66,8 @@ After implementing, before reporting back:
 
 1. Audit the implementation against the spec (every section, every acceptance criterion).
 2. Run `just check`; the whole suite must stay green, golden test included.
-3. Mark the spec `done` (Status, Version, Change log, `specs/README.md` index).
-4. Present the review with the acceptance table, without being asked.
-5. Propose the next unit, so the owner never has to ask what comes next.
-6. After a push, offer the PR title and body.
+3. Mechanical checks: grep the code for spec or decision references (none allowed), for hard-coded enum strings (none allowed), and scan for duplicated logic or misplaced code.
+4. Mark the spec `done` (Status, Version, Change log, `specs/README.md` index).
+5. Present the review with the acceptance table, without being asked.
+6. Propose the next unit, so the owner never has to ask what comes next.
+7. After a push, offer the PR title and body.

@@ -43,9 +43,9 @@ Extension map file: `extensions.json` (repo root).
 ## 5. extensions.json
 
 - Location: repo root, `extensions.json`.
-- Schema: top-level object with keys exactly `photos`, `videos`, `music`, `documents` (lower case); each maps to an array of lower-case extensions without the dot. `other` is implicit: anything unlisted classifies as Other, never forced (PLAN.md §8 rule).
+- Schema: top-level object with keys exactly `photos`, `videos`, `music`, `documents` (lower case); each maps to an array of lower-case extensions without the dot. `other` is implicit: anything unlisted classifies as Other, never forced.
 - Validation, enforced by `tests/test_extensions.py`: keys are only the four known categories; every extension lower-case and dotless; no extension twice within a category; no extension in two categories.
-- Seed: the lists from PLAN.md §8, with `mod` only under music (it is an Amiga module audio format, listed under both videos and music in PLAN.md).
+- Seed: the broad extension lists, with `mod` only under music (it is an Amiga module audio format).
 
 ## 6. Layout constants module (memory_drawer/layout.py)
 

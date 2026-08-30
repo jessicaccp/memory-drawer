@@ -3,6 +3,7 @@
 import argparse
 import os
 import shutil
+import sys
 from pathlib import Path
 
 from memory_drawer import __version__
@@ -18,19 +19,31 @@ def _human_size(n: int) -> str:
     raise AssertionError("unreachable")
 
 
-def _scan(source: Path) -> tuple[int, int]:
-    """Count files and total bytes in a source, read-only."""
+def _scan(source: Path) -> tuple[int, int, int]:
+    """Count files and bytes in a source, read-only, tolerating errors."""
     count = 0
     total = 0
-    for dirpath, dirnames, filenames in os.walk(source, followlinks=False):
-        dirnames.sort()
-        for name in sorted(filenames):
-            try:
-                total += os.path.getsize(Path(dirpath) / name)
-            except OSError:
-                continue
-            count += 1
-    return count, total
+    errors = 0
+
+    def onerror(exc: OSError) -> None:
+        nonlocal errors
+        errors += 1
+
+    try:
+        for dirpath, dirnames, filenames in os.walk(source, onerror=onerror, followlinks=False):
+            dirnames.sort()
+            for name in sorted(filenames):
+                full = Path(dirpath) / name
+                if full.is_symlink():
+                    continue
+                try:
+                    total += full.stat().st_size
+                except OSError:
+                    continue
+                count += 1
+    except OSError:
+        errors += 1
+    return count, total, errors
 
 
 def run_consolidate(config_path: str, dry_run: bool) -> int:
@@ -45,13 +58,21 @@ def run_consolidate(config_path: str, dry_run: bool) -> int:
     print(f"Config OK: {config.master}")
     grand_count = 0
     grand_total = 0
+    walk_errors = 0
     for source in config.sources:
-        count, total = _scan(source.path)
+        count, total, errors = _scan(source.path)
         grand_count += count
         grand_total += total
+        walk_errors += errors
         print(f"  {source.id:<10} {str(source.path):<30} {count:>6} files, {_human_size(total)}")
+    if walk_errors:
+        print(f"Warning: {walk_errors} directories could not be read")
     print(f"Total: {grand_count} files, {_human_size(grand_total)}")
-    free = shutil.disk_usage(config.master).free
+    try:
+        free = shutil.disk_usage(config.master).free
+    except OSError:
+        print("Free space: unknown (drive could not be read)")
+        return 0
     label = f" on {config.master.drive}" if config.master.drive else ""
     status = (
         "OK"
@@ -63,6 +84,8 @@ def run_consolidate(config_path: str, dry_run: bool) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    if sys.stdout is not None and hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(
         prog="memory_drawer",
         description="Consolidate scattered backups into one organized archive.",
@@ -83,7 +106,11 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     if args.command == "consolidate":
-        return run_consolidate(args.config, args.dry_run)
+        try:
+            return run_consolidate(args.config, args.dry_run)
+        except KeyboardInterrupt:
+            print("interrupted")
+            return 130
     parser.print_help()
     return 0
 

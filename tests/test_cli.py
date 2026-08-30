@@ -1,6 +1,7 @@
 """consolidate command behavior (spec 0002 §3)."""
 
 import json
+import shutil
 
 import pytest
 
@@ -62,3 +63,85 @@ def test_help_lists_consolidate(capsys):
         main(["--help"])
     assert exc_info.value.code == 0
     assert "consolidate" in capsys.readouterr().out
+
+
+def test_consolidate_help_shows_options(capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        main(["consolidate", "--help"])
+    assert exc_info.value.code == 0
+    out = capsys.readouterr().out
+    assert "--config" in out
+    assert "--dry-run" in out
+
+
+def test_usage_error_exits_2(capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        main(["consolidate", "--bogus"])
+    assert exc_info.value.code == 2
+
+
+def test_free_space_warning(tmp_path, capsys, monkeypatch):
+    cfg, _ = make_config(tmp_path)
+
+    class FakeUsage:
+        free = 1
+
+    monkeypatch.setattr(shutil, "disk_usage", lambda path: FakeUsage())
+    assert main(["consolidate", "--config", str(cfg), "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "WARNING" in out
+    assert "less than the total source size" in out
+
+
+def test_walk_error_warns(tmp_path, capsys, monkeypatch):
+    from memory_drawer import __main__ as cli
+
+    cfg, _ = make_config(tmp_path)
+
+    def broken_walk(*args, **kwargs):
+        raise OSError("boom")
+
+    monkeypatch.setattr(cli.os, "walk", broken_walk)
+    assert main(["consolidate", "--config", str(cfg), "--dry-run"]) == 0
+    assert "could not be read" in capsys.readouterr().out
+
+
+def test_free_space_unknown(tmp_path, capsys, monkeypatch):
+    from memory_drawer import __main__ as cli
+
+    cfg, _ = make_config(tmp_path)
+
+    def broken_usage(path):
+        raise OSError("boom")
+
+    monkeypatch.setattr(cli.shutil, "disk_usage", broken_usage)
+    assert main(["consolidate", "--config", str(cfg), "--dry-run"]) == 0
+    assert "unknown" in capsys.readouterr().out
+
+
+def test_keyboard_interrupt_exits_130(tmp_path, capsys, monkeypatch):
+    from memory_drawer import __main__ as cli
+
+    cfg, _ = make_config(tmp_path)
+
+    def interrupt(*args):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(cli, "_scan", interrupt)
+    assert main(["consolidate", "--config", str(cfg), "--dry-run"]) == 130
+    assert "interrupted" in capsys.readouterr().out
+
+
+def test_unicode_source_path_prints(tmp_path, capsys):
+    master = tmp_path / "master"
+    master.mkdir()
+    src = tmp_path / "bkp ção"
+    src.mkdir()
+    (src / "foto é.txt").write_text("x", encoding="utf-8")
+    cfg = tmp_path / "config.json"
+    cfg.write_text(
+        json.dumps({"master": str(master), "sources": [{"id": "b1", "path": str(src)}]}),
+        encoding="utf-8",
+    )
+    assert main(["consolidate", "--config", str(cfg), "--dry-run"]) == 0
+    assert "bkp ção" in capsys.readouterr().out

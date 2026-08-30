@@ -3,7 +3,9 @@
 import json
 import os
 import tempfile
+from contextlib import suppress
 from dataclasses import dataclass, field
+from enum import StrEnum
 from pathlib import Path
 
 HEADER = "# memory-drawer manifest v1"
@@ -13,7 +15,19 @@ class ManifestError(Exception):
     """Raised when the manifest is missing its header or corrupt in the middle."""
 
 
-@dataclass
+class Kind(StrEnum):
+    FILE = "file"
+    SIDECAR = "sidecar"
+
+
+class Status(StrEnum):
+    INGESTED = "ingested"
+    SURVIVOR = "survivor"
+    QUARANTINED = "quarantined"
+    ERROR = "error"
+
+
+@dataclass(slots=True)
 class Record:
     file_id: str
     source_id: str
@@ -23,19 +37,23 @@ class Record:
     size: int
     sha256: str
     src_mtime: str
-    kind: str
+    kind: Kind
     sidecar_of: str | None = None
     group_id: str | None = None
-    status: str = "ingested"
+    status: Status = Status.INGESTED
     quarantine_path: str | None = None
     merged_from: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(slots=True)
 class Manifest:
     records: list[Record]
     truncated: bool = False
+
+
+def _line(record: Record) -> str:
+    return json.dumps(_to_dict(record), ensure_ascii=False) + "\n"
 
 
 def _to_dict(record: Record) -> dict:
@@ -69,16 +87,18 @@ def _from_dict(data: dict) -> Record:
             size=data["size"],
             sha256=data["sha256"],
             src_mtime=data["src_mtime"],
-            kind=data["kind"],
+            kind=Kind(data["kind"]),
             sidecar_of=data.get("sidecar_of"),
             group_id=data.get("group_id"),
-            status=data.get("status", "ingested"),
+            status=Status(data.get("status", "ingested")),
             quarantine_path=data.get("quarantine_path"),
             merged_from=data.get("merged_from", []),
             errors=data.get("errors", []),
         )
     except KeyError as exc:
         raise ManifestError(f"record is missing key {exc}") from exc
+    except ValueError as exc:
+        raise ManifestError(f"record has an invalid enum value: {exc}") from exc
 
 
 def append(path: str | Path, records: list[Record]) -> None:
@@ -94,7 +114,7 @@ def append(path: str | Path, records: list[Record]) -> None:
         if is_new:
             fh.write(HEADER + "\n")
         for record in records:
-            fh.write(json.dumps(_to_dict(record), ensure_ascii=False) + "\n")
+            fh.write(_line(record))
 
 
 def load(path: str | Path) -> Manifest:
@@ -160,11 +180,9 @@ def rewrite(path: str | Path, records: list[Record]) -> None:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(HEADER + "\n")
             for record in records:
-                fh.write(json.dumps(_to_dict(record), ensure_ascii=False) + "\n")
+                fh.write(_line(record))
         os.replace(tmp_name, target)
     except BaseException:
-        try:
+        with suppress(OSError):
             os.unlink(tmp_name)
-        except OSError:
-            pass
         raise

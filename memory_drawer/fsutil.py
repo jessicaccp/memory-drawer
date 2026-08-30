@@ -1,11 +1,10 @@
 """Shared file helpers: chunked hashing, copy with hash, sorted walks."""
 
 import hashlib
-import os
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
-CHUNK = 1024 * 1024
+CHUNK = 4 * 1024 * 1024
 
 
 def sha256_file(path: Path) -> str:
@@ -35,9 +34,9 @@ def copy_stream(src: Path, dst: Path) -> str:
 
 def walk_sorted(root: Path, onerror: Callable[[OSError], None]) -> Iterator[tuple[Path, list[str]]]:
     """Walk a tree without following symlinks, yielding sorted directories and files."""
-    for dirpath, dirnames, filenames in os.walk(root, onerror=onerror, followlinks=False):
-        dirnames.sort()
-        yield Path(dirpath), sorted(filenames)
+    for base, dirs, files in root.walk(on_error=onerror, follow_symlinks=False):
+        dirs.sort()
+        yield base, sorted(files)
 
 
 def escape_control(text: str) -> str:

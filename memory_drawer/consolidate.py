@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import sys
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -11,21 +12,23 @@ from pathlib import Path
 from memory_drawer.config import Config, Source
 from memory_drawer.fsutil import copy_stream, sha256_file, walk_sorted
 from memory_drawer.layout import CONSOLIDATED
-from memory_drawer.manifest import Record, already_ingested, append, load, lookup, rewrite
+from memory_drawer.manifest import Kind, Record, Status, append, load, rewrite
+
+BATCH = 100
 
 
 class ConsolidateAbort(Exception):
     """Raised when a run cannot continue at all (destination root not creatable)."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ScanResult:
     count: int
     total: int
     errors: int
 
 
-@dataclass
+@dataclass(slots=True)
 class ConsolidateResult:
     copied: int = 0
     re_copied: int = 0
@@ -80,10 +83,8 @@ def _next_file_id(records: list[Record]) -> str:
 
 
 def _cleanup(path: Path) -> None:
-    try:
+    with suppress(OSError):
         path.unlink()
-    except OSError:
-        pass
 
 
 def _copy_with_retry(src: Path, dst: Path, result: ConsolidateResult) -> str | None:
@@ -142,10 +143,49 @@ def _is_sidecar_of(lower_names: dict[str, str], name: str) -> str | None:
     return lower_names.get(name[:-5].lower())
 
 
+def _kind_of(sidecar_of: str | None) -> Kind:
+    return Kind.SIDECAR if sidecar_of is not None else Kind.FILE
+
+
+def _matches(record: Record, size: int, src_mtime: str, sha256: str) -> bool:
+    """True when the record matches all four fingerprint fields."""
+    return record.size == size and record.src_mtime == src_mtime and record.sha256 == sha256
+
+
+def _make_record(
+    next_id: str,
+    source: Source,
+    full: Path,
+    rel: str,
+    target: Path,
+    size: int,
+    sha256: str,
+    src_mtime: str,
+    kind: Kind,
+    sidecar_of: str | None,
+    record_errors: list[str],
+) -> Record:
+    return Record(
+        file_id=next_id,
+        source_id=source.id,
+        source_path=str(full),
+        rel_path=rel,
+        dest_path=str(target),
+        size=size,
+        sha256=sha256,
+        src_mtime=src_mtime,
+        kind=kind,
+        sidecar_of=sidecar_of,
+        status=Status.INGESTED,
+        errors=record_errors,
+    )
+
+
 def _copy_source(
     config: Config,
     source: Source,
     records: list[Record],
+    by_path: dict[str, list[Record]],
     result: ConsolidateResult,
     manifest_path: Path,
 ) -> None:
@@ -157,10 +197,16 @@ def _copy_source(
         raise ConsolidateAbort(f"could not create destination root {dest_root}: {exc}") from exc
 
     next_id = _next_file_id(records)
+    pending: list[Record] = []
     processed = 0
 
     def onerror(exc: OSError) -> None:
         result.walk_errors += 1
+
+    def flush() -> None:
+        if pending:
+            append(manifest_path, pending)
+            pending.clear()
 
     try:
         for base, names in walk_sorted(source_root, onerror):
@@ -176,34 +222,39 @@ def _copy_source(
                     result.errors.append(f"could not stat {full}: {exc}")
                     continue
                 size = st.st_size
-                mtime = _iso_mtime(st)
+                src_mtime = _iso_mtime(st)
                 rel = full.relative_to(source_root).as_posix()
                 dst = dest_root / rel
                 sidecar_of = _is_sidecar_of(lower_names, name)
                 if sidecar_of is not None and sidecar_of != name[:-5]:
                     result.case_diffs.append(str(full))
-                computed_kind = "sidecar" if sidecar_of is not None else "file"
+                kind = _kind_of(sidecar_of)
 
-                rec = lookup(records, str(full))
+                path_records = by_path.get(str(full), [])
+                rec = path_records[0] if path_records else None
                 if rec is not None:
-                    if rec.status == "quarantined":
+                    if rec.status == Status.QUARANTINED:
                         result.skipped += 1
                         continue
-                    if already_ingested(records, str(full), size, mtime, sha256_file(full)):
-                        if rec.kind != computed_kind or rec.sidecar_of != sidecar_of:
-                            rec.kind = computed_kind
-                            rec.sidecar_of = sidecar_of
-                            result.kind_fixes += 1
-                        if dst.exists():
-                            result.already_present += 1
-                        else:
-                            if not _ensure_parent(dst, result):
-                                continue
-                            sha = _copy_with_retry(full, dst, result)
-                            if sha is not None:
-                                result.re_copied += 1
-                                result.bytes_copied += size
-                        continue
+                    meta_matches = any(
+                        r.size == size and r.src_mtime == src_mtime for r in path_records
+                    )
+                    if meta_matches:
+                        check_sha = sha256_file(full)
+                        if any(_matches(r, size, src_mtime, check_sha) for r in path_records):
+                            if rec.kind != kind or rec.sidecar_of != sidecar_of:
+                                rec.kind = kind
+                                rec.sidecar_of = sidecar_of
+                                result.kind_fixes += 1
+                            if dst.exists():
+                                result.already_present += 1
+                            else:
+                                if not _ensure_parent(dst, result):
+                                    continue
+                                if _copy_with_retry(full, dst, result) is not None:
+                                    result.re_copied += 1
+                                    result.bytes_copied += size
+                            continue
                     target = _unique_dest(dst)
                 else:
                     if dst.exists():
@@ -222,38 +273,44 @@ def _copy_source(
                         json.loads(target.read_text(encoding="utf-8-sig"))
                     except ValueError, UnicodeDecodeError, OSError:
                         record_errors.append("sidecar is not valid JSON")
-                record = Record(
-                    file_id=next_id,
-                    source_id=source.id,
-                    source_path=str(full),
-                    rel_path=rel,
-                    dest_path=str(target),
-                    size=size,
-                    sha256=sha,
-                    src_mtime=mtime,
-                    kind=computed_kind,
-                    sidecar_of=sidecar_of,
-                    status="ingested",
-                    errors=record_errors,
+                record = _make_record(
+                    next_id,
+                    source,
+                    full,
+                    rel,
+                    target,
+                    size,
+                    sha,
+                    src_mtime,
+                    kind,
+                    sidecar_of,
+                    record_errors,
                 )
                 next_id = f"{int(next_id) + 1:08d}"
                 records.append(record)
-                append(manifest_path, [record])
+                by_path.setdefault(str(full), []).append(record)
+                pending.append(record)
                 result.copied += 1
                 result.bytes_copied += size
                 processed += 1
                 if processed % 500 == 0:
                     print(f"{processed} files processed from {source.id}", file=sys.stderr)
+                if len(pending) >= BATCH:
+                    flush()
     except OSError as exc:
         result.errors.append(f"walk failed for {source_root}: {exc}")
+    flush()
 
 
 def consolidate(config: Config, manifest_path: Path) -> ConsolidateResult:
     """Copy all sources into the master folder, returning the run summary."""
     records = load(manifest_path).records
+    by_path: dict[str, list[Record]] = {}
+    for record in records:
+        by_path.setdefault(record.source_path, []).append(record)
     result = ConsolidateResult()
     for source in config.sources:
-        _copy_source(config, source, records, result, manifest_path)
+        _copy_source(config, source, records, by_path, result, manifest_path)
     if result.kind_fixes:
         rewrite(manifest_path, records)
     return result

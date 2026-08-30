@@ -12,12 +12,12 @@ from memory_drawer.layout import MANIFEST
 
 
 def _human_size(n: int) -> str:
-    size = float(n)
-    for unit in ("B", "KB", "MB", "GB", "TB"):
-        if size < 1024 or unit == "TB":
-            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
-        size /= 1024
-    raise AssertionError("unreachable")
+    units = ("B", "KB", "MB", "GB", "TB")
+    for unit in units[:-1]:
+        if n < 1024:
+            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+        n //= 1024
+    return f"{n:.1f} TB"
 
 
 def _drive_label(config: Config) -> str:

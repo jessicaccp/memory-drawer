@@ -136,7 +136,7 @@ def test_sidecar_pairing(tmp_path):
 def test_orphan_json_is_regular_file(tmp_path):
     config = make_config(tmp_path)
     (config.sources[0].path / "notes.json").write_text('{"a": 1}')
-    result, records = run(config, tmp_path)
+    _, records = run(config, tmp_path)
     assert len(records) == 1
     assert records[0].kind == "file"
     assert records[0].sidecar_of is None
@@ -197,7 +197,7 @@ def test_retry_once_then_success(tmp_path, monkeypatch):
         return real(src, dst)
 
     monkeypatch.setattr(cons, "copy_stream", flaky)
-    result, records = run(config, tmp_path)
+    result, _ = run(config, tmp_path)
     assert result.errors == []
     assert result.copied == 1
     assert (config.master / CONSOLIDATED / "s1" / "a.txt").exists()
@@ -231,7 +231,7 @@ def test_zero_byte_and_unicode(tmp_path):
     src = config.sources[0].path
     (src / "vazio.txt").write_bytes(b"")
     (src / "foto ção é 😀.JPG").write_bytes(b"x")
-    result, records = run(config, tmp_path)
+    result, _ = run(config, tmp_path)
     assert result.errors == []
     assert result.copied == 2
     assert (config.master / CONSOLIDATED / "s1" / "foto ção é 😀.JPG").exists()
@@ -270,11 +270,36 @@ def test_dest_without_record_is_error(tmp_path):
     assert dest.read_text() == "stray"
 
 
+def test_interrupt_flushes_pending_records(tmp_path, monkeypatch):
+    from memory_drawer import consolidate as cons
+
+    config = make_config(tmp_path)
+    src = config.sources[0].path
+    for i in range(5):
+        (src / f"f{i}.txt").write_text("x")
+    real = cons.copy_stream
+    calls = {"n": 0}
+
+    def interrupt_after(src_path, dst):
+        calls["n"] += 1
+        if calls["n"] == 3:
+            raise KeyboardInterrupt
+        return real(src_path, dst)
+
+    monkeypatch.setattr(cons, "copy_stream", interrupt_after)
+    with pytest.raises(KeyboardInterrupt):
+        consolidate(config, config.master / MANIFEST)
+    records = load(config.master / MANIFEST).records
+    assert len(records) == 2
+    dests = list((config.master / CONSOLIDATED / "s1").iterdir())
+    assert len(dests) == 2
+
+
 def test_orphan_json_becomes_sidecar(tmp_path):
     config = make_config(tmp_path)
     src = config.sources[0].path
     (src / "IMG.JPG.json").write_text("{}")
-    result, records = run(config, tmp_path)
+    _, records = run(config, tmp_path)
     assert records[0].kind == "file"
     (src / "IMG.JPG").write_bytes(b"photo")
     result2, records2 = run(config, tmp_path)

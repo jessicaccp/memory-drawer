@@ -1,7 +1,7 @@
 # 0004: Consolidate
 
-Status: approved
-Version: 3
+Status: done
+Version: 4
 
 Source of truth for the consolidation work: copying every source into the master folder with provenance, hashing original bytes during the copy, pairing Takeout sidecars, driven by the manifest for safe reruns. Builds on spec 0002 (config, dry-run scan) and spec 0003 (manifest). Decisions marked **[DECISION]** have a proposed default, confirm before implementation.
 
@@ -124,6 +124,7 @@ python -m memory_drawer consolidate [--config PATH] [--dry-run]
 
 ## Change log
 
+- 2026-08-22, v4: implemented and verified (merged via PR #11), acceptance criteria met.
 - 2026-08-22, v3: shared file helpers moved to `fsutil.py`; kind corrections applied on rerun.
 - 2026-08-22, v2: approved, decisions D1-D12 confirmed. Changed files copy to a suffixed destination, preserving both versions.
 - 2026-08-22, v1: created as the project's fourth spec, status proposed.

@@ -18,13 +18,13 @@ class ConfigError(Exception):
     """Raised when the config file is missing or invalid."""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Source:
     id: str
     path: Path
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Config:
     master: Path
     sources: list[Source]

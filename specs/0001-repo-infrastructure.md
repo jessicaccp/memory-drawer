@@ -1,7 +1,7 @@
 # 0001: Repo infrastructure specification
 
 Status: done
-Version: 7
+Version: 8
 
 Source of truth for the repo infrastructure work, the step before any pipeline code.
 
@@ -36,7 +36,7 @@ Extension map file: `extensions.json` (repo root).
 - `requires-python = ">=3.14"` (uv installs 3.14 on both machines; the Windows machine does not need a system Python).
 - Runtime dependency: Pillow (only one so far; exiftool stays out of the package, it is invoked as an external binary).
 - Dev tools in `[dependency-groups] dev = ["ruff", "pytest", "mypy"]` (PEP 735, installed by `uv sync`).
-- `[tool.ruff]`: `target-version = "py314"`, `line-length = 100`, `select = ["E4", "E7", "E9", "F", "I", "UP"]`.
+- `[tool.ruff]`: `target-version = "py314"`, `line-length = 100`, `select = ["E4", "E7", "E9", "F", "I", "UP", "SIM", "RUF"]` (SIM and RUF added by spec 0005).
 - `[tool.mypy]`: `python_version = "3.14"`, `ignore_missing_imports = true` (Pillow ships no stubs), `check_untyped_defs = true`.
 - `[tool.pytest.ini_options]`: `testpaths = ["tests"]`, `addopts = "-q"`.
 
@@ -96,6 +96,7 @@ Project recipes live in `justfile`: `just check` runs all four checks, `just for
 
 ## Change log
 
+- 2026-08-22, v8: ruff select extended with SIM and RUF, per spec 0005.
 - 2026-08-22, v7: English-only policy enforced by review, the language test removed.
 - 2026-08-22, v6: Python pinned to 3.14 (pyproject, ruff, mypy, `.python-version`).
 - 2026-08-22, v5: environment moved to uv (dev tools in a dependency group, setup via `uv sync`), ruff format added to the checks, project recipes in `justfile`.

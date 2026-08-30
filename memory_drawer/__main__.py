@@ -7,17 +7,21 @@ import sys
 from memory_drawer import __version__
 from memory_drawer.config import Config, ConfigError, load_config
 from memory_drawer.consolidate import ConsolidateAbort, consolidate, scan
-from memory_drawer.fsutil import escape_control
 from memory_drawer.layout import MANIFEST
 
 
+def _escape_control(text: str) -> str:
+    """Make text console-safe by escaping control characters."""
+    return "".join(f"\\x{ord(c):02x}" if ord(c) < 32 or ord(c) == 127 else c for c in text)
+
+
 def _human_size(n: int) -> str:
-    size = float(n)
-    for unit in ("B", "KB", "MB", "GB", "TB"):
-        if size < 1024 or unit == "TB":
-            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
-        size /= 1024
-    raise AssertionError("unreachable")
+    units = ("B", "KB", "MB", "GB", "TB")
+    for unit in units[:-1]:
+        if n < 1024:
+            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+        n //= 1024
+    return f"{n:.1f} TB"
 
 
 def _drive_label(config: Config) -> str:
@@ -26,7 +30,7 @@ def _drive_label(config: Config) -> str:
 
 
 def _dry_run(config: Config) -> int:
-    print(f"Config OK: {escape_control(str(config.master))}")
+    print(f"Config OK: {_escape_control(str(config.master))}")
     grand_count = 0
     grand_total = 0
     walk_errors = 0
@@ -36,7 +40,7 @@ def _dry_run(config: Config) -> int:
         grand_total += scanned.total
         walk_errors += scanned.errors
         print(
-            f"  {source.id:<10} {escape_control(str(source.path)):<30} {scanned.count:>6} files, "
+            f"  {source.id:<10} {_escape_control(str(source.path)):<30} {scanned.count:>6} files, "
             f"{_human_size(scanned.total)}"
         )
     if walk_errors:
@@ -58,7 +62,7 @@ def _dry_run(config: Config) -> int:
 
 def _real_run(config: Config) -> int:
     manifest_path = config.master / MANIFEST
-    print(f"Config OK: {escape_control(str(config.master))}")
+    print(f"Config OK: {_escape_control(str(config.master))}")
     total = 0
     for source in config.sources:
         total += scan(source.path).total
@@ -74,7 +78,7 @@ def _real_run(config: Config) -> int:
     try:
         result = consolidate(config, manifest_path)
     except ConsolidateAbort as exc:
-        print(f"aborted: {escape_control(str(exc))}")
+        print(f"aborted: {_escape_control(str(exc))}")
         return 1
     print(f"Copied: {result.copied} files, {_human_size(result.bytes_copied)}")
     print(f"Re-copied: {result.re_copied}")
@@ -85,12 +89,12 @@ def _real_run(config: Config) -> int:
     if result.walk_errors:
         print(f"Warning: {result.walk_errors} directories could not be read")
     for warning in result.warnings:
-        print(f"Warning: {escape_control(warning)}")
+        print(f"Warning: {_escape_control(warning)}")
     for diff in result.case_diffs:
-        print(f"Case-only sidecar match: {escape_control(diff)}")
+        print(f"Case-only sidecar match: {_escape_control(diff)}")
     print(f"Errors: {len(result.errors)}")
     for error in result.errors:
-        print(f"error: {escape_control(error)}")
+        print(f"error: {_escape_control(error)}")
     return 1 if result.errors else 0
 
 

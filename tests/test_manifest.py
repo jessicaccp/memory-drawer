@@ -155,6 +155,19 @@ def test_binary_garbage(tmp_path):
         load(path)
 
 
+def test_invalid_kind_value(tmp_path):
+    path = tmp_path / "manifest.jsonl"
+    append(path, [record()])
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(
+            '{"file_id": "00000002", "source_id": "s", "source_path": "p", '
+            '"rel_path": "r", "dest_path": "d", "size": 1, "sha256": "x", '
+            '"src_mtime": "t", "kind": "banana"}\n'
+        )
+    with pytest.raises(ManifestError, match="enum"):
+        load(path)
+
+
 def test_rewrite_preserves_content(tmp_path):
     path = tmp_path / "manifest.jsonl"
     first = record()

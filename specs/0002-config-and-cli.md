@@ -1,7 +1,7 @@
 # 0002: Config and CLI
 
-Status: approved
-Version: 3
+Status: done
+Version: 4
 
 Source of truth for the config and CLI work: the user-facing entry of the pipeline. It defines `config.json` and the `consolidate` command with a dry-run mode that shows the plan without touching anything. Builds on spec 0001 (package skeleton, layout constants). Decisions marked **[DECISION]** have a proposed default, confirm before implementation.
 
@@ -100,6 +100,7 @@ The walk is read-only, sorted, and does not follow symlinks. Directories that ca
 
 ## Change log
 
+- 2026-08-22, v4: implemented and verified, acceptance criteria met. Windows console behavior to be confirmed on the target machine.
 - 2026-08-22, v3: hardened. Ids reject Windows-reserved names, invalid characters and trailing dots; paths expand environment variables; walk tolerates unreadable directories; free space degrades to unknown; interrupted exits 130; console output is UTF-8.
 - 2026-08-22, v2: approved, decisions D1-D6 confirmed.
 - 2026-08-22, v1: created as the project's second spec, status proposed.

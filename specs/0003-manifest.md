@@ -1,7 +1,7 @@
 # 0003: Manifest
 
-Status: approved
-Version: 2
+Status: done
+Version: 3
 
 Source of truth for the manifest: the JSONL record of every file in the archive, the basis for provenance and idempotency. Builds on spec 0001 (layout constants) and spec 0002 (config). Decisions marked **[DECISION]** have a proposed default, confirm before implementation.
 
@@ -111,5 +111,6 @@ A file is already ingested when a record exists with the same `source_path` and 
 
 ## Change log
 
+- 2026-08-22, v3: implemented and verified, acceptance criteria met (87 tests total in the suite).
 - 2026-08-22, v2: approved, decisions D1-D6 confirmed.
 - 2026-08-22, v1: created as the project's third spec, status proposed.

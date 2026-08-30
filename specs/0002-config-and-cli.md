@@ -1,7 +1,7 @@
 # 0002: Config and CLI
 
-Status: proposed
-Version: 1
+Status: approved
+Version: 2
 
 Source of truth for the config and CLI work: the user-facing entry of the pipeline. It defines `config.json` and the `consolidate` command with a dry-run mode that shows the plan without touching anything. Builds on spec 0001 (package skeleton, layout constants). Decisions marked **[DECISION]** have a proposed default, confirm before implementation.
 
@@ -12,6 +12,8 @@ Source of truth for the config and CLI work: the user-facing entry of the pipeli
 - CLI command `consolidate` with `--dry-run`
 - Dry-run output: per-source file counts and byte totals, grand total, free-space check on the master drive
 - `config.example.json` committed; `config.json` gitignored
+
+`config.json` is the machine-readable source of truth. An interactive flow (folder pickers with confirmation) is planned so the user never edits JSON by hand; it will generate this file.
 
 **Out:**
 - Copying, hashing, dedupe, quarantine, reports (each is its own spec)
@@ -97,4 +99,5 @@ The walk is read-only, sorted, and does not follow symlinks.
 
 ## Change log
 
+- 2026-08-22, v2: approved, decisions D1-D6 confirmed.
 - 2026-08-22, v1: created as the project's second spec, status proposed.

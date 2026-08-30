@@ -90,7 +90,7 @@ def _from_dict(data: dict) -> Record:
             kind=Kind(data["kind"]),
             sidecar_of=data.get("sidecar_of"),
             group_id=data.get("group_id"),
-            status=Status(data.get("status", "ingested")),
+            status=Status(data.get("status", Status.INGESTED)),
             quarantine_path=data.get("quarantine_path"),
             merged_from=data.get("merged_from", []),
             errors=data.get("errors", []),

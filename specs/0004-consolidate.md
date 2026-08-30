@@ -1,7 +1,7 @@
 # 0004: Consolidate
 
-Status: proposed
-Version: 1
+Status: approved
+Version: 2
 
 Source of truth for the consolidation work: copying every source into the master folder with provenance, hashing original bytes during the copy, pairing Takeout sidecars, driven by the manifest for safe reruns. Builds on spec 0002 (config, dry-run scan) and spec 0003 (manifest). Decisions marked **[DECISION]** have a proposed default, confirm before implementation.
 
@@ -49,7 +49,7 @@ Checked per file before copying:
 | Record with status `quarantined` | skip, never re-copy **[DECISION D2]** |
 | No record | copy as new |
 
-Failed copies are **not** appended to the manifest: the manifest only holds successfully ingested files. Failures are counted and listed, and the next run retries them naturally **[DECISION D3]**. Reruns do not re-hash existing copies; integrity checking is a future piece, not this one **[DECISION D8]**.
+Failed copies are **not** appended to the manifest: the manifest only holds successfully ingested files. Failures are counted and listed, and the next run retries them naturally **[DECISION D3]**. Reruns do not re-hash existing copies; integrity checking is a future piece, not this one **[DECISION D8]**. A changed file (any of the four fields differs from every record) counts as new and is copied to a suffixed destination (`name_2.ext`, then `_3`, and so on), so both versions stay in the master and the old record stays valid.
 
 ## 5. Error handling
 
@@ -123,4 +123,5 @@ python -m memory_drawer consolidate [--config PATH] [--dry-run]
 
 ## Change log
 
+- 2026-08-22, v2: approved, decisions D1-D12 confirmed. Changed files copy to a suffixed destination, preserving both versions.
 - 2026-08-22, v1: created as the project's fourth spec, status proposed.

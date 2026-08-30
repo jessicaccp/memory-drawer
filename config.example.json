@@ -1,0 +1,7 @@
+{
+  "master": "E:\\master",
+  "sources": [
+    { "id": "hdd1", "path": "D:\\backups\\hdd1" },
+    { "id": "takeout", "path": "D:\\backups\\takeout" }
+  ]
+}

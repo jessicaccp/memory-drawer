@@ -187,3 +187,56 @@ def test_unicode_round_trip(tmp_path):
     append(path, [rec])
     loaded = load(path)
     assert loaded.records[0].source_path == rec.source_path
+
+
+def test_append_to_empty_file_writes_header(tmp_path):
+    path = tmp_path / "manifest.jsonl"
+    path.write_text("", encoding="utf-8")
+    append(path, [record()])
+    lines = path.read_text(encoding="utf-8").splitlines()
+    assert lines[0] == HEADER
+    assert lines.count(HEADER) == 1
+
+
+def test_header_only_manifest(tmp_path):
+    path = tmp_path / "manifest.jsonl"
+    path.write_text(HEADER + "\n", encoding="utf-8")
+    manifest = load(path)
+    assert manifest.records == []
+    assert not manifest.truncated
+
+
+def test_non_dict_json_line(tmp_path):
+    path = tmp_path / "manifest.jsonl"
+    append(path, [record()])
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write("[1, 2]\n")
+    with pytest.raises(ManifestError, match="corrupt line 3"):
+        load(path)
+
+
+def test_corrupt_last_line_with_newline(tmp_path):
+    path = tmp_path / "manifest.jsonl"
+    append(path, [record()])
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write("{bad}\n")
+    with pytest.raises(ManifestError, match="corrupt line 3"):
+        load(path)
+
+
+def test_rewrite_on_missing_file(tmp_path):
+    path = tmp_path / "manifest.jsonl"
+    rewrite(path, [record()])
+    manifest = load(path)
+    assert len(manifest.records) == 1
+
+
+def test_merged_from_round_trip(tmp_path):
+    path = tmp_path / "manifest.jsonl"
+    rec = record(
+        status="survivor",
+        group_id="g000123",
+        merged_from=["D:\\bkp\\IMG_1234.JPG.json"],
+    )
+    append(path, [rec])
+    assert load(path).records[0] == rec

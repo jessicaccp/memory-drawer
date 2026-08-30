@@ -58,6 +58,14 @@ def test_without_dry_run_needs_config(capsys):
     assert "config error" in capsys.readouterr().out
 
 
+def test_escape_control():
+    from memory_drawer.__main__ import _escape_control
+
+    assert _escape_control("a\nb\tc") == "a\\x0ab\\x09c"
+    assert _escape_control("normal.txt") == "normal.txt"
+    assert _escape_control("del\x7f") == "del\\x7f"
+
+
 def test_help_lists_consolidate(capsys):
     with pytest.raises(SystemExit) as exc_info:
         main(["--help"])

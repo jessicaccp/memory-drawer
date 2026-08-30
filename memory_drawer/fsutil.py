@@ -7,14 +7,19 @@ from pathlib import Path
 CHUNK = 4 * 1024 * 1024
 
 
+def _iter_chunks(fh) -> Iterator[bytes]:
+    while True:
+        chunk = fh.read(CHUNK)
+        if not chunk:
+            return
+        yield chunk
+
+
 def sha256_file(path: Path) -> str:
     """Hash a file in chunks, never loading it whole."""
     digest = hashlib.sha256()
     with path.open("rb") as fh:
-        while True:
-            chunk = fh.read(CHUNK)
-            if not chunk:
-                break
+        for chunk in _iter_chunks(fh):
             digest.update(chunk)
     return digest.hexdigest()
 
@@ -23,10 +28,7 @@ def copy_stream(src: Path, dst: Path) -> str:
     """Copy src to dst in chunks, returning the sha256 of the source bytes."""
     digest = hashlib.sha256()
     with src.open("rb") as fin, dst.open("wb") as fout:
-        while True:
-            chunk = fin.read(CHUNK)
-            if not chunk:
-                break
+        for chunk in _iter_chunks(fin):
             digest.update(chunk)
             fout.write(chunk)
     return digest.hexdigest()
@@ -37,8 +39,3 @@ def walk_sorted(root: Path, onerror: Callable[[OSError], None]) -> Iterator[tupl
     for base, dirs, files in root.walk(on_error=onerror, follow_symlinks=False):
         dirs.sort()
         yield base, sorted(files)
-
-
-def escape_control(text: str) -> str:
-    """Make text console-safe by escaping control characters."""
-    return "".join(f"\\x{ord(c):02x}" if ord(c) < 32 or ord(c) == 127 else c for c in text)

@@ -4,7 +4,7 @@ import hashlib
 
 import pytest
 
-from memory_drawer.fsutil import copy_stream, escape_control, sha256_file, walk_sorted
+from memory_drawer.fsutil import copy_stream, sha256_file, walk_sorted
 
 
 def test_sha256_file(tmp_path):
@@ -42,9 +42,3 @@ def test_walk_sorted(tmp_path):
     (root / "a" / "x.txt").write_text("")
     seen = [(base.name, names) for base, names in walk_sorted(root, lambda exc: None)]
     assert seen == [("r", []), ("a", ["x.txt"]), ("b", ["1.txt", "2.txt"])]
-
-
-def test_escape_control():
-    assert escape_control("a\nb\tc") == "a\\x0ab\\x09c"
-    assert escape_control("normal.txt") == "normal.txt"
-    assert escape_control("del\x7f") == "del\\x7f"

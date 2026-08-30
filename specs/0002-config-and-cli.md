@@ -1,7 +1,7 @@
 # 0002: Config and CLI
 
 Status: approved
-Version: 2
+Version: 3
 
 Source of truth for the config and CLI work: the user-facing entry of the pipeline. It defines `config.json` and the `consolidate` command with a dry-run mode that shows the plan without touching anything. Builds on spec 0001 (package skeleton, layout constants). Decisions marked **[DECISION]** have a proposed default, confirm before implementation.
 
@@ -33,7 +33,7 @@ Source of truth for the config and CLI work: the user-facing entry of the pipeli
 
 - `master`: the archive root folder
 - `sources`: the backup folders to consolidate, each with an `id` (label used in folder names) and a `path`
-- Paths may be relative to the working directory; they are resolved to absolute on load **[DECISION D1]**
+- Paths may be relative, or contain environment variables (`%VAR%` on Windows, `$VAR` elsewhere); they are expanded and resolved to absolute on load **[DECISION D1]**
 
 ## 3. CLI surface
 
@@ -45,7 +45,8 @@ python -m memory_drawer consolidate [--config PATH] [--dry-run]
 - `--config PATH`: config file, default `config.json` in the working directory **[DECISION D2]**
 - `--dry-run`: validate the config, walk the sources read-only, print the plan, touch nothing **[DECISION D3]**
 - Without `--dry-run`, print "copying is not implemented yet" and exit 1 **[DECISION D4]**
-- Exit codes: 0 success, 1 validation error or not implemented, 2 usage error
+- Exit codes: 0 success, 1 validation error or not implemented, 2 usage error, 130 interrupted
+- Console output is UTF-8 with replacement on encoding errors, so accented names print on any Windows console
 
 ## 4. Validation rules (fail fast)
 
@@ -56,7 +57,7 @@ Run in order, stop at the first error. Message format: `config error: <detail>`.
 3. `master` is a non-empty string and an existing directory
 4. `sources` is a non-empty list
 5. Each source has a non-empty `id` and a non-empty `path`
-6. Source `id`s are unique and valid folder names (no path separators, not `.` or `..`)
+6. Source `id`s are unique and valid folder names: stripped of surrounding whitespace, no path separators, no Windows-reserved device names (`CON`, `PRN`, `AUX`, `NUL`, `COM1`-`COM9`, `LPT1`-`LPT9`, case-insensitive), no `: * ? " < > |` or control characters, no trailing dot, not `.` or `..`
 7. Each source `path` is an existing directory
 8. `master` is not inside any source and no source is inside `master` (real paths; prevents copying the archive into itself)
 9. Overlapping sources are allowed; duplicates are handled later **[DECISION D6]**
@@ -75,7 +76,7 @@ Total: 1801 files, 2.1 GB
 Free space on E: 120 GB (OK)
 ```
 
-The walk is read-only, sorted, and does not follow symlinks.
+The walk is read-only, sorted, and does not follow symlinks. Directories that cannot be read are skipped and counted; the count is shown as a warning line. If the master drive cannot be queried, free space prints as unknown. Neither case fails the run.
 
 ## 6. Layout
 
@@ -99,5 +100,6 @@ The walk is read-only, sorted, and does not follow symlinks.
 
 ## Change log
 
+- 2026-08-22, v3: hardened. Ids reject Windows-reserved names, invalid characters and trailing dots; paths expand environment variables; walk tolerates unreadable directories; free space degrades to unknown; interrupted exits 130; console output is UTF-8.
 - 2026-08-22, v2: approved, decisions D1-D6 confirmed.
 - 2026-08-22, v1: created as the project's second spec, status proposed.

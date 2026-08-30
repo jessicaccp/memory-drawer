@@ -1,4 +1,4 @@
-"""Consolidation behavior (spec 0004)."""
+"""Consolidation behavior."""
 
 import hashlib
 import json

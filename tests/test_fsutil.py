@@ -1,4 +1,4 @@
-"""Shared file helpers (spec 0004 §8)."""
+"""Shared file helpers."""
 
 import hashlib
 

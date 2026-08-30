@@ -1,4 +1,4 @@
-"""Shared file helpers (spec 0004 §8)."""
+"""Shared file helpers: chunked hashing, copy with hash, sorted walks."""
 
 import hashlib
 import os

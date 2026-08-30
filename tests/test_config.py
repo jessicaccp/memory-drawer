@@ -1,4 +1,4 @@
-"""Config loading and validation rules (spec 0002 §4)."""
+"""Config loading and validation rules."""
 
 import json
 

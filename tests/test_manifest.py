@@ -1,4 +1,4 @@
-"""Manifest behavior (spec 0003)."""
+"""Manifest behavior."""
 
 from dataclasses import asdict
 

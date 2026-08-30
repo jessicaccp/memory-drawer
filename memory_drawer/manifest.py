@@ -1,4 +1,4 @@
-"""JSONL manifest of every file in the archive (spec 0003)."""
+"""JSONL manifest of every file in the archive."""
 
 import json
 import os

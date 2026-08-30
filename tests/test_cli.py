@@ -1,4 +1,4 @@
-"""consolidate command behavior (spec 0002 §3)."""
+"""consolidate command behavior."""
 
 import json
 import shutil

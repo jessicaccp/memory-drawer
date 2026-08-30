@@ -1,4 +1,4 @@
-"""Consolidation: copy sources into the master folder (spec 0004)."""
+"""Consolidation: copy sources into the master folder."""
 
 import json
 import os

@@ -270,6 +270,31 @@ def test_dest_without_record_is_error(tmp_path):
     assert dest.read_text() == "stray"
 
 
+def test_interrupt_flushes_pending_records(tmp_path, monkeypatch):
+    from memory_drawer import consolidate as cons
+
+    config = make_config(tmp_path)
+    src = config.sources[0].path
+    for i in range(5):
+        (src / f"f{i}.txt").write_text("x")
+    real = cons.copy_stream
+    calls = {"n": 0}
+
+    def interrupt_after(src_path, dst):
+        calls["n"] += 1
+        if calls["n"] == 3:
+            raise KeyboardInterrupt
+        return real(src_path, dst)
+
+    monkeypatch.setattr(cons, "copy_stream", interrupt_after)
+    with pytest.raises(KeyboardInterrupt):
+        consolidate(config, config.master / MANIFEST)
+    records = load(config.master / MANIFEST).records
+    assert len(records) == 2
+    dests = list((config.master / CONSOLIDATED / "s1").iterdir())
+    assert len(dests) == 2
+
+
 def test_orphan_json_becomes_sidecar(tmp_path):
     config = make_config(tmp_path)
     src = config.sources[0].path

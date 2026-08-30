@@ -1,4 +1,4 @@
-"""Golden end-to-end baseline (spec 0005): pins the exact pipeline output.
+"""Golden end-to-end baseline: pins the exact pipeline output.
 
 Written and green before the refactor. If any refactoring changes the
 manifest bytes, the destination files or the exit code, this test fails.

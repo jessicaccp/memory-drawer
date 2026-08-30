@@ -299,7 +299,8 @@ def _copy_source(
                     flush()
     except OSError as exc:
         result.errors.append(f"walk failed for {source_root}: {exc}")
-    flush()
+    finally:
+        flush()
 
 
 def consolidate(config: Config, manifest_path: Path) -> ConsolidateResult:

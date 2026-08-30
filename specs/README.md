@@ -11,5 +11,5 @@ Status values: `proposed`, `approved`, `in-progress`, `done`, `superseded`.
 | 0001 | [Repo infrastructure](0001-repo-infrastructure.md) | done |
 | 0002 | [Config and CLI](0002-config-and-cli.md) | done |
 | 0003 | [Manifest](0003-manifest.md) | done |
-| 0004 | [Consolidate](0004-consolidate.md) | approved |
+| 0004 | [Consolidate](0004-consolidate.md) | done |
 | 0005 | [Code quality](0005-code-quality.md) | done |

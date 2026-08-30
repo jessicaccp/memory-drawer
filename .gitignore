@@ -31,3 +31,6 @@ manifests/
 
 # Working doc (private, not pushed)
 PLAN.md
+
+# Local config (real paths, generated per machine)
+config.json

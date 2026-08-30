@@ -53,9 +53,9 @@ def test_invalid_config_exits_1(tmp_path, capsys):
     assert "config error" in capsys.readouterr().out
 
 
-def test_without_dry_run_exits_1(capsys):
+def test_without_dry_run_needs_config(capsys):
     assert main(["consolidate"]) == 1
-    assert "not implemented yet" in capsys.readouterr().out
+    assert "config error" in capsys.readouterr().out
 
 
 def test_help_lists_consolidate(capsys):
@@ -94,14 +94,14 @@ def test_free_space_warning(tmp_path, capsys, monkeypatch):
 
 
 def test_walk_error_warns(tmp_path, capsys, monkeypatch):
-    from memory_drawer import __main__ as cli
+    from memory_drawer import consolidate as cons
 
     cfg, _ = make_config(tmp_path)
 
     def broken_walk(*args, **kwargs):
         raise OSError("boom")
 
-    monkeypatch.setattr(cli.os, "walk", broken_walk)
+    monkeypatch.setattr(cons.os, "walk", broken_walk)
     assert main(["consolidate", "--config", str(cfg), "--dry-run"]) == 0
     assert "could not be read" in capsys.readouterr().out
 
@@ -120,15 +120,15 @@ def test_free_space_unknown(tmp_path, capsys, monkeypatch):
 
 
 def test_keyboard_interrupt_exits_130(tmp_path, capsys, monkeypatch):
-    from memory_drawer import __main__ as cli
+    from memory_drawer import consolidate as cons
 
     cfg, _ = make_config(tmp_path)
 
     def interrupt(*args):
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(cli, "_scan", interrupt)
-    assert main(["consolidate", "--config", str(cfg), "--dry-run"]) == 130
+    monkeypatch.setattr(cons, "_copy_stream", interrupt)
+    assert main(["consolidate", "--config", str(cfg)]) == 130
     assert "interrupted" in capsys.readouterr().out
 
 

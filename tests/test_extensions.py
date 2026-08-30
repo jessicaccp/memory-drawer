@@ -1,4 +1,4 @@
-"""Validate extensions.json against the schema in spec 0001 §5."""
+"""Validate extensions.json against its schema."""
 
 import json
 from pathlib import Path

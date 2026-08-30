@@ -1,13 +1,14 @@
 """Command line entry point: python -m memory_drawer."""
 
 import argparse
-import os
 import shutil
 import sys
-from pathlib import Path
 
 from memory_drawer import __version__
-from memory_drawer.config import ConfigError, load_config
+from memory_drawer.config import Config, ConfigError, load_config
+from memory_drawer.consolidate import ConsolidateAbort, consolidate, scan
+from memory_drawer.fsutil import escape_control
+from memory_drawer.layout import MANIFEST
 
 
 def _human_size(n: int) -> str:
@@ -19,52 +20,25 @@ def _human_size(n: int) -> str:
     raise AssertionError("unreachable")
 
 
-def _scan(source: Path) -> tuple[int, int, int]:
-    """Count files and bytes in a source, read-only, tolerating errors."""
-    count = 0
-    total = 0
-    errors = 0
-
-    def onerror(exc: OSError) -> None:
-        nonlocal errors
-        errors += 1
-
-    try:
-        for dirpath, dirnames, filenames in os.walk(source, onerror=onerror, followlinks=False):
-            dirnames.sort()
-            for name in sorted(filenames):
-                full = Path(dirpath) / name
-                if full.is_symlink():
-                    continue
-                try:
-                    total += full.stat().st_size
-                except OSError:
-                    continue
-                count += 1
-    except OSError:
-        errors += 1
-    return count, total, errors
+def _drive_label(config: Config) -> str:
+    drive = config.master.drive
+    return f" on {drive}" if drive else ""
 
 
-def run_consolidate(config_path: str, dry_run: bool) -> int:
-    if not dry_run:
-        print("copying is not implemented yet")
-        return 1
-    try:
-        config = load_config(config_path)
-    except ConfigError as exc:
-        print(f"config error: {exc}")
-        return 1
-    print(f"Config OK: {config.master}")
+def _dry_run(config: Config) -> int:
+    print(f"Config OK: {escape_control(str(config.master))}")
     grand_count = 0
     grand_total = 0
     walk_errors = 0
     for source in config.sources:
-        count, total, errors = _scan(source.path)
-        grand_count += count
-        grand_total += total
-        walk_errors += errors
-        print(f"  {source.id:<10} {str(source.path):<30} {count:>6} files, {_human_size(total)}")
+        scanned = scan(source.path)
+        grand_count += scanned.count
+        grand_total += scanned.total
+        walk_errors += scanned.errors
+        print(
+            f"  {source.id:<10} {escape_control(str(source.path)):<30} {scanned.count:>6} files, "
+            f"{_human_size(scanned.total)}"
+        )
     if walk_errors:
         print(f"Warning: {walk_errors} directories could not be read")
     print(f"Total: {grand_count} files, {_human_size(grand_total)}")
@@ -73,14 +47,62 @@ def run_consolidate(config_path: str, dry_run: bool) -> int:
     except OSError:
         print("Free space: unknown (drive could not be read)")
         return 0
-    label = f" on {config.master.drive}" if config.master.drive else ""
     status = (
         "OK"
         if free >= grand_total
         else (f"WARNING: less than the total source size ({_human_size(free)} free)")
     )
-    print(f"Free space{label}: {_human_size(free)} ({status})")
+    print(f"Free space{_drive_label(config)}: {_human_size(free)} ({status})")
     return 0
+
+
+def _real_run(config: Config) -> int:
+    manifest_path = config.master / MANIFEST
+    print(f"Config OK: {escape_control(str(config.master))}")
+    total = 0
+    for source in config.sources:
+        total += scan(source.path).total
+    try:
+        free = shutil.disk_usage(config.master).free
+    except OSError:
+        free = None
+    if free is not None and free < total:
+        print(
+            f"Warning: free space{_drive_label(config)} ({_human_size(free)}) "
+            f"is less than the total source size ({_human_size(total)})"
+        )
+    try:
+        result = consolidate(config, manifest_path)
+    except ConsolidateAbort as exc:
+        print(f"aborted: {escape_control(str(exc))}")
+        return 1
+    print(f"Copied: {result.copied} files, {_human_size(result.bytes_copied)}")
+    print(f"Re-copied: {result.re_copied}")
+    print(f"Already present: {result.already_present}")
+    print(f"Skipped (symlinks and non-regular files): {result.skipped}")
+    if result.kind_fixes:
+        print(f"Kind corrections: {result.kind_fixes}")
+    if result.walk_errors:
+        print(f"Warning: {result.walk_errors} directories could not be read")
+    for warning in result.warnings:
+        print(f"Warning: {escape_control(warning)}")
+    for diff in result.case_diffs:
+        print(f"Case-only sidecar match: {escape_control(diff)}")
+    print(f"Errors: {len(result.errors)}")
+    for error in result.errors:
+        print(f"error: {escape_control(error)}")
+    return 1 if result.errors else 0
+
+
+def run_consolidate(config_path: str, dry_run: bool) -> int:
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        print(f"config error: {exc}")
+        return 1
+    if dry_run:
+        return _dry_run(config)
+    return _real_run(config)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -92,13 +114,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command")
-    consolidate = sub.add_parser(
-        "consolidate", help="validate config and show the consolidation plan"
-    )
-    consolidate.add_argument(
+    consolidate_cmd = sub.add_parser("consolidate", help="copy sources into the master folder")
+    consolidate_cmd.add_argument(
         "--config", default="config.json", help="config file (default: config.json)"
     )
-    consolidate.add_argument(
+    consolidate_cmd.add_argument(
         "--dry-run",
         action="store_true",
         help="validate, scan sources and print the plan, touch nothing",

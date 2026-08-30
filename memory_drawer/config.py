@@ -1,4 +1,4 @@
-"""Load and validate config.json (spec 0002)."""
+"""Load and validate config.json."""
 
 import json
 import os

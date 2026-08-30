@@ -12,4 +12,4 @@ Status values: `proposed`, `approved`, `in-progress`, `done`, `superseded`.
 | 0002 | [Config and CLI](0002-config-and-cli.md) | done |
 | 0003 | [Manifest](0003-manifest.md) | done |
 | 0004 | [Consolidate](0004-consolidate.md) | approved |
-| 0005 | [Code quality](0005-code-quality.md) | proposed |
+| 0005 | [Code quality](0005-code-quality.md) | approved |

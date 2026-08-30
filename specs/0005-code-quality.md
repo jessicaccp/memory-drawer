@@ -1,7 +1,7 @@
 # 0005: Code quality and modernization
 
-Status: proposed
-Version: 1
+Status: approved
+Version: 2
 
 Source of truth for the readability and performance pass over the code: modern Python idioms, cleaner organization, faster execution, no behavior change. Builds on specs 0001 to 0004, which already define the tooling and the module layout. Decisions marked **[DECISION]** have a proposed default, confirm before implementation.
 
@@ -92,4 +92,5 @@ Why each change cannot alter the result:
 
 ## Change log
 
+- 2026-08-22, v2: approved, decisions D1-D12 confirmed. D12 stays rejected.
 - 2026-08-22, v1: created as the project's fifth spec, status proposed.
